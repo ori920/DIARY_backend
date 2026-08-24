@@ -43,20 +43,23 @@ function genToken() {
 }
 
 // ---------- 微信 HTTPS 请求封装 ----------
-function wxRequest(apiPath, postData) {
+function wxRequest(apiPath, postData, method = 'POST') {
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify(postData)
+    const isPost = method === 'POST'
+    const data = isPost ? JSON.stringify(postData) : ''
     const options = {
       hostname: 'api.weixin.qq.com',
       port: 443,
       path: apiPath,
-      method: 'POST',
+      method,
       // 云托管 alpine 镜像根证书可能不全，关闭证书校验以兼容微信接口
       rejectUnauthorized: false,
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data)
-      }
+      headers: isPost
+        ? {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(data)
+          }
+        : {}
     }
     const req = https.request(options, (res) => {
       let body = ''
@@ -65,20 +68,20 @@ function wxRequest(apiPath, postData) {
         try {
           resolve(JSON.parse(body))
         } catch (e) {
-          reject(new Error('微信接口返回解析失败'))
+          reject(new Error('微信接口返回解析失败: ' + body))
         }
       })
     })
     req.on('error', (err) => reject(err))
-    req.write(data)
+    if (isPost) req.write(data)
     req.end()
   })
 }
 
-/** code2Session：用 login code 换 openid / session_key */
+/** code2Session：用 login code 换 openid / session_key（GET 接口） */
 function code2Session(jsCode) {
   const p = `/sns/jscode2session?appid=${WX_APPID}&secret=${WX_SECRET}&js_code=${jsCode}&grant_type=authorization_code`
-  return wxRequest(p, {})
+  return wxRequest(p, null, 'GET')
 }
 
 /** 获取 access_token（用于手机号解密接口） */
