@@ -1,7 +1,12 @@
 const fs = require('fs')
 const path = require('path')
 const https = require('https')
-const { pool } = require('./db')
+const db = require('./db')
+// 每次使用都从 db.pool 取最新的连接池（initTables 完成后才就绪）
+function getPool() {
+  if (!db.pool) throw new Error('数据库连接池尚未初始化，请稍后重试')
+  return db.pool
+}
 
 // ---------- 配置 ----------
 // 微信小程序配置（请替换为你的真实 AppID / AppSecret）
@@ -81,10 +86,10 @@ async function getPhoneNumber(phoneCode) {
 
 /** 根据 openid 查找或创建用户，返回用户对象 */
 async function findOrCreateUser(openid) {
-  const [rows] = await pool.query('SELECT * FROM users WHERE openid = ?', [openid])
+  const [rows] = await getPool().query('SELECT * FROM users WHERE openid = ?', [openid])
   if (rows.length) return rows[0]
   const user = { openid, phone: '', nickname: '', create_time: Date.now() }
-  await pool.query(
+  await getPool().query(
     'INSERT INTO users (openid, phone, nickname, create_time) VALUES (?, ?, ?, ?)',
     [user.openid, user.phone, user.nickname, user.create_time]
   )
@@ -93,13 +98,13 @@ async function findOrCreateUser(openid) {
 
 /** 更新用户手机号 */
 async function updateUserPhone(openid, phone) {
-  await pool.query('UPDATE users SET phone = ? WHERE openid = ?', [phone, openid])
+  await getPool().query('UPDATE users SET phone = ? WHERE openid = ?', [phone, openid])
 }
 
 /** 生成 token 并写入 tokens 表 */
 async function issueToken(openid) {
   const token = 'tk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10)
-  await pool.query(
+  await getPool().query(
     'INSERT INTO tokens (token, openid, create_time) VALUES (?, ?, ?)',
     [token, openid, Date.now()]
   )
@@ -108,7 +113,7 @@ async function issueToken(openid) {
 
 /** 根据 token 取用户 */
 async function getUserByToken(token) {
-  const [rows] = await pool.query(
+  const [rows] = await getPool().query(
     `SELECT u.* FROM tokens t
      JOIN users u ON u.openid = t.openid
      WHERE t.token = ?`,

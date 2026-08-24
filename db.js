@@ -9,18 +9,19 @@ const DB_USER = process.env.DB_USER || 'root'
 const DB_PASSWORD = process.env.DB_PASSWORD || 'NNKs2Sju'
 const DB_NAME = process.env.DB_NAME || 'diary'
 
-// 关键：强制 IPv4，避免 Node 把 localhost 解析成 ::1 (IPv6)
 const POOL_OPTS = {
   host: DB_HOST,
   port: DB_PORT,
   user: DB_USER,
   password: DB_PASSWORD,
   waitForConnections: true,
-  charset: 'utf8mb4',
-  family: 4
+  charset: 'utf8mb4'
 }
 
-let pool
+// 用对象包装 pool，后续 initTables 里对它赋值。
+// 这样外部 require('./db').pool 始终能取到最新的连接池，
+// 避免「解构时 pool 还是 undefined」的时序问题。
+const dbExports = { pool: null }
 
 // ---------- 自动建库 + 建表 ----------
 async function initTables() {
@@ -39,7 +40,7 @@ async function initTables() {
   }
 
   // 2. 创建指定数据库的连接池
-  pool = mysql.createPool({
+  dbExports.pool = mysql.createPool({
     ...POOL_OPTS,
     database: DB_NAME,
     connectionLimit: 10
@@ -83,4 +84,4 @@ async function initTables() {
   `)
 }
 
-module.exports = { pool, initTables }
+module.exports = dbExports

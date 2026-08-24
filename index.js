@@ -3,7 +3,8 @@ const fs = require('fs')
 const path = require('path')
 
 const auth = require('./auth')
-const { pool, initTables } = require('./db')
+const db = require('./db')
+const { initTables } = db
 
 console.log('========================================')
 console.log('[DIARY v2026-08-24-fallback] 启动')
@@ -60,7 +61,7 @@ router.get('/health', (req, res) => ok(res, { status: 'ok', time: Date.now() }))
 // 获取当前用户的全部日记（按创建时间倒序）
 router.get('/diaries', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.query(
+    const [rows] = await db.pool.query(
       'SELECT * FROM diaries WHERE openid = ? ORDER BY create_time DESC',
       [req.user.openid]
     )
@@ -73,7 +74,7 @@ router.get('/diaries', authMiddleware, async (req, res) => {
 // 根据 id 获取单条日记
 router.get('/diaries/:id', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM diaries WHERE id = ?', [req.params.id])
+    const [rows] = await db.pool.query('SELECT * FROM diaries WHERE id = ?', [req.params.id])
     if (!rows.length) return fail(res, 404, '日记不存在')
     ok(res, rowToDiary(rows[0]))
   } catch (e) {
@@ -95,7 +96,7 @@ router.post('/diaries', authMiddleware, async (req, res) => {
       date: date || formatDate(new Date()),
       createTime: Date.now()
     }
-    await pool.query(
+    await db.pool.query(
       'INSERT INTO diaries (id, openid, title, content, weather, mood, date, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [item.id, item.openid, item.title, item.content, item.weather, item.mood, item.date, item.createTime]
     )
@@ -126,7 +127,7 @@ router.post('/diary/write', authMiddleware, async (req, res) => {
       date: date || formatDate(new Date()),
       createTime: Date.now()
     }
-    await pool.query(
+    await db.pool.query(
       'INSERT INTO diaries (id, openid, title, content, weather, mood, date, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [item.id, item.openid, item.title, item.content, item.weather, item.mood, item.date, item.createTime]
     )
@@ -139,7 +140,7 @@ router.post('/diary/write', authMiddleware, async (req, res) => {
 // 更新日记
 router.put('/diaries/:id', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM diaries WHERE id = ?', [req.params.id])
+    const [rows] = await db.pool.query('SELECT * FROM diaries WHERE id = ?', [req.params.id])
     if (!rows.length) return fail(res, 404, '日记不存在')
     const cur = rows[0]
     const { title, content, weather, mood, date } = req.body || {}
@@ -150,7 +151,7 @@ router.put('/diaries/:id', authMiddleware, async (req, res) => {
       mood: mood !== undefined ? mood : cur.mood,
       date: date !== undefined ? date : cur.date
     }
-    await pool.query(
+    await db.pool.query(
       'UPDATE diaries SET title=?, content=?, weather=?, mood=?, date=? WHERE id=?',
       [next.title, next.content, next.weather, next.mood, next.date, req.params.id]
     )
@@ -163,9 +164,9 @@ router.put('/diaries/:id', authMiddleware, async (req, res) => {
 // 删除日记
 router.delete('/diaries/:id', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM diaries WHERE id = ?', [req.params.id])
+    const [rows] = await db.pool.query('SELECT * FROM diaries WHERE id = ?', [req.params.id])
     if (!rows.length) return fail(res, 404, '日记不存在')
-    await pool.query('DELETE FROM diaries WHERE id = ?', [req.params.id])
+    await db.pool.query('DELETE FROM diaries WHERE id = ?', [req.params.id])
     ok(res, { id: req.params.id })
   } catch (e) {
     fail(res, 500, e.message)
@@ -175,7 +176,7 @@ router.delete('/diaries/:id', authMiddleware, async (req, res) => {
 // 根据日期（YYYY-MM-DD）查询日记
 router.get('/diaries/date/:date', authMiddleware, async (req, res) => {
   try {
-    const [rows] = await pool.query(
+    const [rows] = await db.pool.query(
       'SELECT * FROM diaries WHERE openid = ? AND date = ? ORDER BY create_time DESC',
       [req.user.openid, req.params.date]
     )
@@ -188,7 +189,7 @@ router.get('/diaries/date/:date', authMiddleware, async (req, res) => {
 // 清空当前用户全部日记
 router.delete('/diaries', authMiddleware, async (req, res) => {
   try {
-    const [r] = await pool.query('DELETE FROM diaries WHERE openid = ?', [req.user.openid])
+    const [r] = await db.pool.query('DELETE FROM diaries WHERE openid = ?', [req.user.openid])
     ok(res, { count: r.affectedRows })
   } catch (e) {
     fail(res, 500, e.message)
