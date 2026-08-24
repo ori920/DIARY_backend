@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const https = require('https')
+const { pool } = require('./db')
 
 // ---------- 配置 ----------
 // 微信小程序配置（请替换为你的真实 AppID / AppSecret）
@@ -10,37 +11,6 @@ const WX_SECRET = process.env.WX_SECRET || ''
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data')
 const USER_FILE = path.join(DATA_DIR, 'users.json')
-
-// ---------- 用户与 Token 存储（文件持久化，生产可换数据库） ----------
-function loadUsers() {
-  try {
-    if (!fs.existsSync(USER_FILE)) return {}
-    const raw = fs.readFileSync(USER_FILE, 'utf-8')
-    const obj = JSON.parse(raw)
-    return obj && typeof obj === 'object' ? obj : {}
-  } catch (e) {
-    console.error('loadUsers error', e)
-    return {}
-  }
-}
-
-function saveUsers(map) {
-  try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
-    fs.writeFileSync(USER_FILE, JSON.stringify(map, null, 2), 'utf-8')
-  } catch (e) {
-    console.error('saveUsers error', e)
-  }
-}
-
-/** openid -> user 映射 */
-const usersByOpenid = loadUsers()
-/** token -> openid 映射 */
-const tokenMap = {}
-
-function genToken() {
-  return 'tk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10)
-}
 
 // ---------- 微信 HTTPS 请求封装 ----------
 function wxRequest(apiPath, postData, method = 'POST') {
@@ -107,35 +77,44 @@ async function getPhoneNumber(phoneCode) {
   return res.phone_info
 }
 
-// ---------- 业务方法 ----------
+// ---------- 业务方法（MySQL 持久化） ----------
+
 /** 根据 openid 查找或创建用户，返回用户对象 */
-function findOrCreateUser(openid) {
-  let user = usersByOpenid[openid]
-  if (!user) {
-    user = {
-      openid,
-      phone: '',
-      nickname: '',
-      createTime: Date.now()
-    }
-    usersByOpenid[openid] = user
-    saveUsers(usersByOpenid)
-  }
+async function findOrCreateUser(openid) {
+  const [rows] = await pool.query('SELECT * FROM users WHERE openid = ?', [openid])
+  if (rows.length) return rows[0]
+  const user = { openid, phone: '', nickname: '', create_time: Date.now() }
+  await pool.query(
+    'INSERT INTO users (openid, phone, nickname, create_time) VALUES (?, ?, ?, ?)',
+    [user.openid, user.phone, user.nickname, user.create_time]
+  )
   return user
 }
 
-/** 生成 token 并绑定 openid */
-function issueToken(openid) {
-  const token = genToken()
-  tokenMap[token] = openid
+/** 更新用户手机号 */
+async function updateUserPhone(openid, phone) {
+  await pool.query('UPDATE users SET phone = ? WHERE openid = ?', [phone, openid])
+}
+
+/** 生成 token 并写入 tokens 表 */
+async function issueToken(openid) {
+  const token = 'tk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10)
+  await pool.query(
+    'INSERT INTO tokens (token, openid, create_time) VALUES (?, ?, ?)',
+    [token, openid, Date.now()]
+  )
   return token
 }
 
 /** 根据 token 取用户 */
-function getUserByToken(token) {
-  const openid = tokenMap[token]
-  if (!openid) return null
-  return usersByOpenid[openid] || null
+async function getUserByToken(token) {
+  const [rows] = await pool.query(
+    `SELECT u.* FROM tokens t
+     JOIN users u ON u.openid = t.openid
+     WHERE t.token = ?`,
+    [token]
+  )
+  return rows.length ? rows[0] : null
 }
 
 module.exports = {
@@ -143,6 +122,7 @@ module.exports = {
   code2Session,
   getPhoneNumber,
   findOrCreateUser,
+  updateUserPhone,
   issueToken,
   getUserByToken
 }

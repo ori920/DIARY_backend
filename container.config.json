@@ -14,6 +14,27 @@
       "key": "WX_SECRET",
       "value": "",
       "isSecret": true
+    },
+    {
+      "key": "DB_HOST",
+      "value": "10.19.105.170"
+    },
+    {
+      "key": "DB_PORT",
+      "value": "3306"
+    },
+    {
+      "key": "DB_USER",
+      "value": "root"
+    },
+    {
+      "key": "DB_PASSWORD",
+      "value": "NNKs2Sju",
+      "isSecret": true
+    },
+    {
+      "key": "DB_NAME",
+      "value": "diary"
     }
   ]
 }
