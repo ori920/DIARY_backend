@@ -1,0 +1,20 @@
+# 依赖
+node_modules/
+**/node_modules/
+
+# 运行时数据（日记数据应存云托管挂载的 CFS /data，勿入库）
+data/
+**/data/
+
+# 日志
+*.log
+npm-debug.log*
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 环境变量 / 密钥（WX_SECRET 等请在云托管控制台配置，勿入库）
+.env
+.env.local

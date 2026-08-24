@@ -1,0 +1,19 @@
+{
+  "containerPort": 3000,
+  "minNum": 0,
+  "maxNum": 3,
+  "cpu": 0.5,
+  "mem": 1,
+  "policy": "always",
+  "env": [
+    {
+      "key": "WX_APPID",
+      "value": "wx270ed1a0ce6e248b"
+    },
+    {
+      "key": "WX_SECRET",
+      "value": "",
+      "isSecret": true
+    }
+  ]
+}
