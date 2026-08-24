@@ -5,7 +5,12 @@ const path = require('path')
 const auth = require('./auth')
 const { pool, initTables } = require('./db')
 
-console.log('[启动] DB_HOST =', process.env.DB_HOST || '(未设置)', '| DB_PORT =', process.env.DB_PORT || 3306, '| DB_NAME =', process.env.DB_NAME || 'diary')
+console.log('========================================')
+console.log('[DIARY v2026-08-24-fallback] 启动')
+console.log('[启动] process.env.DB_HOST =', process.env.DB_HOST || '(未设置)')
+console.log('[启动] process.env.DB_PORT =', process.env.DB_PORT || '(未设置)')
+console.log('[启动] process.env.DB_NAME =', process.env.DB_NAME || '(未设置)')
+console.log('========================================')
 
 const app = express()
 const PORT = process.env.PORT || 3000

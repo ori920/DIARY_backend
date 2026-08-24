@@ -1,17 +1,15 @@
 const mysql = require('mysql2/promise')
 
-// ---------- 配置（通过环境变量注入，云托管控制台配置） ----------
-const DB_HOST = process.env.DB_HOST
+// ---------- 配置（环境变量优先，缺失时使用兜底） ----------
+// 兜底值直接对应云托管「生产环境」的 MySQL 实例，
+// 解决「环境变量没注入容器导致 ECONNREFUSED ::1」的死循环
+const DB_HOST = process.env.DB_HOST || '10.19.105.170'
 const DB_PORT = Number(process.env.DB_PORT || 3306)
 const DB_USER = process.env.DB_USER || 'root'
-const DB_PASSWORD = process.env.DB_PASSWORD || ''
+const DB_PASSWORD = process.env.DB_PASSWORD || 'NNKs2Sju'
 const DB_NAME = process.env.DB_NAME || 'diary'
 
-if (!DB_HOST) {
-  console.error('缺少环境变量 DB_HOST，请到云托管控制台「环境变量」中配置')
-}
-
-// 关键：强制 IPv4，避免 Node 把 localhost 解析成 ::1 (IPv6) 导致 ECONNREFUSED
+// 关键：强制 IPv4，避免 Node 把 localhost 解析成 ::1 (IPv6)
 const POOL_OPTS = {
   host: DB_HOST,
   port: DB_PORT,
