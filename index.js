@@ -187,7 +187,7 @@ router.post('/auth/login', (req, res) => {
   auth.code2Session(code)
     .then((session) => {
       if (!session.openid) {
-        return fail(res, 401, session.errmsg || '微信登录失败')
+        return fail(res, 401, '微信登录失败: ' + (session.errmsg || '无 openid') + ' (errcode=' + (session.errcode || '?') + ')')
       }
       const user = auth.findOrCreateUser(session.openid)
       const token = auth.issueToken(session.openid)
