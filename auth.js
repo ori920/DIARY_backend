@@ -51,6 +51,8 @@ function wxRequest(apiPath, postData) {
       port: 443,
       path: apiPath,
       method: 'POST',
+      // 云托管 alpine 镜像根证书可能不全，关闭证书校验以兼容微信接口
+      rejectUnauthorized: false,
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(data)
