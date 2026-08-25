@@ -1,12 +1,11 @@
 const mysql = require('mysql2/promise')
 
-// ---------- 配置（环境变量优先，缺失时使用兜底） ----------
-// 兜底值直接对应云托管「生产环境」的 MySQL 实例，
-// 解决「环境变量没注入容器导致 ECONNREFUSED ::1」的死循环
+// ---------- 配置（必须通过云托管控制台环境变量注入） ----------
 const DB_HOST = process.env.DB_HOST || '10.19.105.170'
 const DB_PORT = Number(process.env.DB_PORT || 3306)
 const DB_USER = process.env.DB_USER || 'root'
-const DB_PASSWORD = process.env.DB_PASSWORD || 'NNKs2Sju'
+// 密码不提供硬编码兜底，必须由环境变量注入，避免密码写死在代码里泄露
+const DB_PASSWORD = process.env.DB_PASSWORD || ''
 const DB_NAME = process.env.DB_NAME || 'diary'
 
 const POOL_OPTS = {

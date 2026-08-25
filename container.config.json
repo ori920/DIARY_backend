@@ -1,6 +1,6 @@
 {
   "containerPort": 3000,
-  "minNum": 0,
+  "minNum": 1,
   "maxNum": 3,
   "cpu": 0.5,
   "mem": 1,
@@ -29,7 +29,7 @@
     },
     {
       "key": "DB_PASSWORD",
-      "value": "NNKs2Sju",
+      "value": "Asdfghjkl161150",
       "isSecret": true
     },
     {

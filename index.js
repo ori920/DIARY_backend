@@ -1,6 +1,4 @@
 const express = require('express')
-const fs = require('fs')
-const path = require('path')
 
 const auth = require('./auth')
 const db = require('./db')
@@ -228,6 +226,7 @@ router.post('/auth/login', async (req, res) => {
     const token = await auth.issueToken(session.openid)
     ok(res, { token, openid: user.openid, phone: user.phone })
   } catch (err) {
+    console.error('[登录异常]', err.code || '', err.message, err.stack)
     fail(res, 500, err.message || '微信登录异常')
   }
 })

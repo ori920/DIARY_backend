@@ -1,5 +1,3 @@
-const fs = require('fs')
-const path = require('path')
 const https = require('https')
 const db = require('./db')
 // 每次使用都从 db.pool 取最新的连接池（initTables 完成后才就绪）
@@ -14,11 +12,9 @@ function getPool() {
 const WX_APPID = process.env.WX_APPID || 'wx270ed1a0ce6e248b'
 const WX_SECRET = process.env.WX_SECRET || ''
 
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data')
-const USER_FILE = path.join(DATA_DIR, 'users.json')
-
-// ---------- 微信 HTTPS 请求封装 ----------
-function wxRequest(apiPath, postData, method = 'POST') {
+// ---------- 微信 HTTPS 请求封装（带超时 + 重试） ----------
+// ECONNRESET 等瞬时网络故障，重试后通常能成功
+function wxRequestOnce(apiPath, postData, method) {
   return new Promise((resolve, reject) => {
     const isPost = method === 'POST'
     const data = isPost ? JSON.stringify(postData) : ''
@@ -27,7 +23,6 @@ function wxRequest(apiPath, postData, method = 'POST') {
       port: 443,
       path: apiPath,
       method,
-      // 云托管 alpine 镜像根证书可能不全，关闭证书校验以兼容微信接口
       rejectUnauthorized: false,
       headers: isPost
         ? {
@@ -48,9 +43,31 @@ function wxRequest(apiPath, postData, method = 'POST') {
       })
     })
     req.on('error', (err) => reject(err))
+    // 5 秒超时，防止 hang 住
+    req.setTimeout(5000, () => {
+      req.destroy(new Error('timeout'))
+    })
     if (isPost) req.write(data)
     req.end()
   })
+}
+
+async function wxRequest(apiPath, postData, method = 'POST') {
+  const MAX_RETRY = 3
+  let lastErr = null
+  for (let i = 0; i < MAX_RETRY; i++) {
+    try {
+      console.log('[wxRequest] 第' + (i + 1) + '次尝试', method, 'api.weixin.qq.com' + apiPath.slice(0, 60))
+      const res = await wxRequestOnce(apiPath, postData, method)
+      return res
+    } catch (e) {
+      lastErr = e
+      console.error('[wxRequest] 第' + (i + 1) + '次失败:', e.code || e.message)
+      // 非最后一次时短暂等待再重试
+      if (i < MAX_RETRY - 1) await new Promise(r => setTimeout(r, 500))
+    }
+  }
+  throw lastErr
 }
 
 /** code2Session：用 login code 换 openid / session_key（GET 接口） */
