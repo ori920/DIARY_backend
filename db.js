@@ -48,7 +48,7 @@ async function initTables() {
 
   // 3. 自动建表
   // 用户表
-  await pool.query(`
+  await dbExports.pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       openid VARCHAR(64) PRIMARY KEY,
       phone VARCHAR(32) DEFAULT '',
@@ -58,7 +58,7 @@ async function initTables() {
   `)
 
   // 日记表
-  await pool.query(`
+  await dbExports.pool.query(`
     CREATE TABLE IF NOT EXISTS diaries (
       id VARCHAR(64) PRIMARY KEY,
       openid VARCHAR(64) NOT NULL DEFAULT '',
@@ -74,7 +74,7 @@ async function initTables() {
   `)
 
   // token 表（token -> openid）
-  await pool.query(`
+  await dbExports.pool.query(`
     CREATE TABLE IF NOT EXISTS tokens (
       token VARCHAR(64) PRIMARY KEY,
       openid VARCHAR(64) NOT NULL,
@@ -84,4 +84,5 @@ async function initTables() {
   `)
 }
 
+dbExports.initTables = initTables
 module.exports = dbExports
